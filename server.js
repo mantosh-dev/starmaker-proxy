@@ -30,44 +30,20 @@ async function getUserProfile(uid) {
   }
 }
 
-// Endpoint helper jo query aur path dono variants check karega
-async function fetchGameData(action) {
-  const ts = Date.now();
-  const urls = [
-    `https://m.starmakerstudios.com/go-v1/rhapsody-music/game-${action}?promotion_id=2711&_sx_ts=${ts}`,
-    `https://m.starmakerstudios.com/go-v1/rhapsody-music/2711/game-${action}?_sx_ts=${ts}`,
-    `https://m.starmakerstudios.com/go-v1/rhapsody-music/${action}?promotion_id=2711&_sx_ts=${ts}`
-  ];
-
-  for (const u of urls) {
-    try {
-      const res = await axios.get(u, { headers: baseHeaders, timeout: 5000 });
-      if (res.data) return res.data;
-    } catch (e) {
-      // agla URL format try karein
-    }
-  }
-  return null;
-}
-
 app.get('/api/live-status', async (req, res) => {
   try {
-    const [refreshJson, resultJson] = await Promise.all([
-      fetchGameData('refresh'),
-      fetchGameData('result')
+    const ts = Date.now();
+    
+    // Exact endpoints as captured in Network tab: refresh?ts=... and result?ts=...
+    const [refreshRes, resultRes] = await Promise.all([
+      axios.get(`https://m.starmakerstudios.com/go-v1/rhapsody-music/refresh?promotion_id=2711&ts=${ts}`, { headers: baseHeaders }),
+      axios.get(`https://m.starmakerstudios.com/go-v1/rhapsody-music/result?promotion_id=2711&ts=${ts}`, { headers: baseHeaders })
     ]);
 
-    if (!refreshJson && !resultJson) {
-      return res.status(404).json({
-        success: false,
-        error: "Both refresh and result endpoints returned 404. Check promotion_id path."
-      });
-    }
+    const roundData = refreshRes.data?.data || refreshRes.data || {};
+    const resultData = resultRes.data?.data || resultRes.data || {};
 
-    const roundData = refreshJson?.data || {};
-    const resultData = resultJson?.data || {};
-
-    const rawList = resultData.gods_reward_gold_list || resultData.top3_user_list || [];
+    const rawList = resultData.gods_reward_gold_list || resultData.top3_user_list || resultData.user_list || [];
 
     const top3 = [];
     for (let i = 0; i < Math.min(rawList.length, 3); i++) {
@@ -92,14 +68,15 @@ app.get('/api/live-status', async (req, res) => {
 
     res.json({
       success: true,
-      round: roundData.curr_round || roundData.round || 'Active',
-      timeLeft: roundData.round_left_time || 0,
+      round: roundData.curr_round || roundData.round || roundData.today_round || 'Active',
+      timeLeft: roundData.round_left_time || roundData.left_time || 0,
       top3
     });
   } catch (err) {
+    console.error("Fetch error:", err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Proxy active on port ${PORT}`));
+app.listen(PORT, () => console.log(`Star Treasure Proxy listening on port ${PORT}`));
