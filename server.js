@@ -5,7 +5,7 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Aapke complete injected cookies
+// Aapke charo injected cookies
 const COOKIE_HEADER = [
   'oauth_token=pwowkqOBGM3U5qGzIkdczjpFig3AmY0r',
   'PHPSESSID=qmnd88sup6pur82idvrrsavsos',
@@ -21,7 +21,7 @@ const baseHeaders = {
   'Accept': 'application/json, text/plain, */*'
 };
 
-// api-rush profile API se 11-digit SID aur Name nikalna
+// api-rush profile API se 11-digit SID fetch karna
 async function getUserProfile(uid) {
   try {
     const url = `https://api-rush.starmakerstudios.com/v1/users/profile?user_id=${uid}`;
@@ -49,23 +49,27 @@ app.get('/api/live-status', async (req, res) => {
   try {
     const ts = Date.now();
 
-    // Live Round & Results APIs
-    const [refreshRes, resultRes] = await Promise.all([
-      axios.get(`https://m.starmakerstudios.com/go-v1/ssc/2711/refresh?ts=${ts}`, {
+    // Index endpoint hamesha 200 deta hai aur isme round + top winners dono hote hain (Log #84)
+    let gameData = null;
+
+    try {
+      const indexRes = await axios.get(`https://m.starmakerstudios.com/go-v1/ssc/2711/index?ts=${ts}`, {
         headers: baseHeaders,
         timeout: 5000
-      }),
-      axios.get(`https://m.starmakerstudios.com/go-v1/ssc/2711/result?ts=${ts}`, {
+      });
+      gameData = indexRes.data;
+    } catch (e) {
+      // Fallback to refresh agar index fail ho
+      const refreshRes = await axios.get(`https://m.starmakerstudios.com/go-v1/ssc/2711/refresh?ts=${ts}`, {
         headers: baseHeaders,
         timeout: 5000
-      })
-    ]);
+      });
+      gameData = refreshRes.data;
+    }
 
-    const refreshData = refreshRes.data || {};
-    const resultData = resultRes.data || {};
-
-    const roundInfo = refreshData.curr_round_info || resultData.curr_round_info || {};
-    const winnersList = resultData.gods_reward_gold_list || resultData.last_gods_list || [];
+    const roundInfo = gameData?.curr_round_info || {};
+    // Log #84 aur #73 ke formats
+    const winnersList = gameData?.last_gods_list || gameData?.gods_reward_gold_list || [];
 
     const top3 = [];
     for (let i = 0; i < Math.min(winnersList.length, 3); i++) {
@@ -83,7 +87,7 @@ app.get('/api/live-status', async (req, res) => {
           rank: u.rank || (i + 1),
           sid: prof.sid,
           name: prof.name || u.stage_name || u.name || `Player_${prof.sid}`,
-          coins: u.reward_gold || u.last_round_golds || 0
+          coins: u.last_round_golds || u.reward_gold || 0
         });
       }
     }
