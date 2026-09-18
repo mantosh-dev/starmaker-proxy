@@ -5,17 +5,19 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Aapka persistent cookie
-const OAUTH_COOKIE = 'oauth_token=pwowkqOBGM3U5qGzIkdczjpFig3AmY0r;';
+// Exact persistent cookies
+const OAUTH_COOKIE = 'oauth_token=pwowkqOBGM3U5qGzIkdczjpFig3AmY0r; PHPSESSID=khu8s2rsb8qlfs0r1r56sj3tk1;';
 
+// Exact headers matched from your DevTools Network capture
 const baseHeaders = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36',
+  'User-Agent': 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36',
   'Cookie': OAUTH_COOKIE,
   'Referer': 'https://m.starmakerstudios.com/v/rhapsody-music/index?promotion_id=2711',
-  'Origin': 'https://m.starmakerstudios.com'
+  'Origin': 'https://m.starmakerstudios.com',
+  'Accept': 'application/json, text/plain, */*'
 };
 
-// Profile API se SID fetch karna
+// api-rush profile API se SID aur Stage Name fetch karna
 async function getUserProfile(uid) {
   try {
     const url = `https://api-rush.starmakerstudios.com/v1/users/profile?user_id=${uid}`;
@@ -33,11 +35,11 @@ async function getUserProfile(uid) {
 app.get('/api/live-status', async (req, res) => {
   try {
     const ts = Date.now();
-    
-    // Exact endpoints as captured in Network tab: refresh?ts=... and result?ts=...
+
+    // Exact paths from your network capture: /go-v1/ssc/2711/refresh & /go-v1/ssc/2711/result
     const [refreshRes, resultRes] = await Promise.all([
-      axios.get(`https://m.starmakerstudios.com/go-v1/rhapsody-music/refresh?promotion_id=2711&ts=${ts}`, { headers: baseHeaders }),
-      axios.get(`https://m.starmakerstudios.com/go-v1/rhapsody-music/result?promotion_id=2711&ts=${ts}`, { headers: baseHeaders })
+      axios.get(`https://m.starmakerstudios.com/go-v1/ssc/2711/refresh?ts=${ts}`, { headers: baseHeaders }),
+      axios.get(`https://m.starmakerstudios.com/go-v1/ssc/2711/result?ts=${ts}`, { headers: baseHeaders })
     ]);
 
     const roundData = refreshRes.data?.data || refreshRes.data || {};
@@ -73,7 +75,6 @@ app.get('/api/live-status', async (req, res) => {
       top3
     });
   } catch (err) {
-    console.error("Fetch error:", err.message);
     res.status(500).json({ success: false, error: err.message });
   }
 });
