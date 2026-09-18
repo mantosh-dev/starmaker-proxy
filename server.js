@@ -5,25 +5,30 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-// Exact persistent cookies from DevTools
-const COOKIES = 'oauth_token=pwowkqOBGM3U5qGzIkdczjpFig3AmY0r; PHPSESSID=khu8s2rsb8qlfs0r1r56sj3tk1;';
+// Aapke complete injected cookies
+const COOKIE_HEADER = [
+  'oauth_token=pwowkqOBGM3U5qGzIkdczjpFig3AmY0r',
+  'PHPSESSID=qmnd88sup6pur82idvrrsavsos',
+  'X-Rce-Token=11yVtdU0iI9K-7MGSmqjG896U3y6ACfiv3-jM0tw==',
+  'uid=562949968068375'
+].join('; ');
 
 const baseHeaders = {
   'User-Agent': 'Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Mobile Safari/537.36',
-  'Cookie': COOKIES,
+  'Cookie': COOKIE_HEADER,
   'Referer': 'https://m.starmakerstudios.com/v/rhapsody-music/index?promotion_id=2711',
   'Origin': 'https://m.starmakerstudios.com',
   'Accept': 'application/json, text/plain, */*'
 };
 
-// api-rush profile API se SID aur Stage Name nikalna
+// api-rush profile API se 11-digit SID aur Name nikalna
 async function getUserProfile(uid) {
   try {
     const url = `https://api-rush.starmakerstudios.com/v1/users/profile?user_id=${uid}`;
     const res = await axios.get(url, {
       headers: {
         'User-Agent': baseHeaders['User-Agent'],
-        'Cookie': COOKIES,
+        'Cookie': COOKIE_HEADER,
         'Referer': 'https://m.starmakerstudios.com/',
         'Origin': 'https://m.starmakerstudios.com'
       },
@@ -44,7 +49,7 @@ app.get('/api/live-status', async (req, res) => {
   try {
     const ts = Date.now();
 
-    // StarMaker SSC Promotion 2711 live endpoints
+    // Live Round & Results APIs
     const [refreshRes, resultRes] = await Promise.all([
       axios.get(`https://m.starmakerstudios.com/go-v1/ssc/2711/refresh?ts=${ts}`, {
         headers: baseHeaders,
@@ -56,7 +61,6 @@ app.get('/api/live-status', async (req, res) => {
       })
     ]);
 
-    // Root-level JSON mapping matching your network captures
     const refreshData = refreshRes.data || {};
     const resultData = resultRes.data || {};
 
